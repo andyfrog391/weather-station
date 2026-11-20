@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#07111f">
+<title>Lydney Weather & Aviation Station</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#07111f;--panel:#101d2d;--panel2:#142438;--line:#26384d;--text:#eaf2fb;--muted:#93a8bf;--cyan:#48c7e8;--green:#5bd49a;--amber:#ffca70}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif;overflow:hidden}
+body{padding:clamp(8px,1.2vw,20px);display:flex;flex-direction:column;gap:10px}
+header{height:56px;min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#1e8db5,#2453a1);display:grid;place-items:center;font-size:22px}
+h1{font-size:clamp(17px,2vw,25px);margin:0;letter-spacing:.04em}.sub{font-size:11px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-top:3px}
+.headright{display:flex;align-items:center;gap:12px}.clock{text-align:right;font-variant-numeric:tabular-nums}.clock strong{display:block;font-size:20px}.clock span{font-size:11px;color:var(--muted)}
+button{background:#1a3047;color:var(--text);border:1px solid #34516d;border-radius:9px;padding:9px 12px;font-weight:650;font-size:12px}
+button:active{transform:scale(.98)}button.active{background:#16445a;border-color:var(--cyan);color:#dff9ff}
+main{display:grid;grid-template-columns:1.04fr .96fr;gap:10px;flex:1;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.panelhead{padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);min-height:49px}
+.paneltitle{font-weight:750;font-size:14px;letter-spacing:.04em}.eyebrow{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;margin-top:2px}
+.pill{font-size:10px;border:1px solid #31516b;color:#b9d8e9;padding:5px 8px;border-radius:99px;white-space:nowrap}
+.layers{display:flex;gap:5px}.layers button{padding:7px 9px;font-size:11px}
+.mapwrap{position:relative;flex:1;min-height:200px;background:#0b1726}
+#windy{width:100%;height:100%;border:0;display:block;background:#0b1726}
+#airmap{width:100%;height:100%;background:#0b1726}
+.weatherstats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:9px}
+.stat{background:var(--panel2);border-radius:9px;padding:9px 10px;min-width:0}
+.stat label{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.stat strong{display:block;font-size:clamp(14px,1.55vw,21px);margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat small{font-size:10px;color:var(--muted)}
+.aviationbody{display:grid;grid-template-rows:minmax(180px,1fr) minmax(110px,30%);flex:1;min-height:0}
+#airmap{min-height:180px}
+.flightlist{border-top:1px solid var(--line);overflow:auto;padding:5px 9px}
+.flightrow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #203247;border-radius:0;padding:7px 5px}
+.flightrow:last-child{border-bottom:0}.flightrow b{font-size:12px}.flightrow small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.flightrow .alt{font-size:11px;color:#c5d6e7;text-align:right}.flightrow .dist{font-size:10px;color:var(--cyan);min-width:48px;text-align:right}
+.statusline{padding:7px 12px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+footer{font-size:10px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;padding:0 3px}
+a{color:#9de6ff}.leaflet-container{font:12px system-ui}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#102033;color:#eaf2fb}.leaflet-popup-content{margin:10px 12px}
+.plane-icon{width:26px;height:26px;display:grid;place-items:center;color:#72e3ff;text-shadow:0 1px 5px #001}
+.modalback{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:10000;padding:16px}.modalback.open{display:flex}
+.modal{width:min(440px,100%);background:#102033;border:1px solid #38516c;border-radius:16px;padding:18px;box-shadow:0 20px 80px #0009}
+.modal h2{font-size:18px;margin:0 0 7px}.modal p{color:var(--muted);font-size:12px;line-height:1.5}
+.modal label{display:block;color:#c7d8e8;font-size:11px;margin:12px 0 5px}.modal input{width:100%;background:#07111f;color:white;border:1px solid #38516c;border-radius:8px;padding:11px;font-size:14px}
+.modalactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+.notice{color:var(--amber);font-size:11px;line-height:1.4}
+@media(max-width:700px){body{overflow:auto}main{grid-template-columns:1fr;grid-template-rows:55vh 55vh}header{height:auto;min-height:48px}.clock strong{font-size:16px}.aviationbody{grid-template-rows:minmax(180px,1fr) 120px}footer{padding-bottom:8px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="mark">🌦️</div><div><h1>WEATHER & AVIATION STATION</h1><div class="sub" id="locationName">LYDNEY · HOME AREA</div></div></div>
+ <div class="headright"><div class="clock"><strong id="clock">--:--:--</strong><span id="date">Loading local time</span></div><button id="settingsBtn">⚙ SETTINGS</button></div>
+</header>
+<main>
+ <section class="panel">
+  <div class="panelhead"><div><div class="paneltitle">WEATHER RADAR</div><div class="eyebrow">Live map · rain, cloud, wind and temperature</div></div>
+   <div class="layers"><button class="active" data-layer="rain">RAIN</button><button data-layer="clouds">CLOUD</button><button data-layer="wind">WIND</button><button data-layer="temp">TEMP</button></div>
+  </div>
+  <div class="mapwrap"><iframe id="windy" title="Windy live weather map" loading="eager" allowfullscreen></iframe></div>
+  <div class="weatherstats">
+   <div class="stat"><label>Temperature</label><strong id="temp">--°</strong><small id="feels">Feels like --°</small></div>
+   <div class="stat"><label>Rain now</label><strong id="rain">-- mm</strong><small id="rainchance">Next hour: --%</small></div>
+   <div class="stat"><label>Wind</label><strong id="wind">-- mph</strong><small id="winddir">Direction --</small></div>
+   <div class="stat"><label>Cloud cover</label><strong id="cloud">--%</strong><small id="humidity">Humidity --%</small></div>
+  </div>
+  <div class="statusline"><span id="weatherStatus">Connecting to weather service…</span><span>Source: Open-Meteo · Windy</span></div>
+ </section>
+ <section class="panel">
+  <div class="panelhead"><div><div class="paneltitle">AIRCRAFT TRACKING</div><div class="eyebrow">Live ADS-B positions around home</div></div><span class="pill" id="rangePill">30 MILE RADIUS</span></div>
+  <div class="aviationbody">
+   <div id="airmap"></div>
+   <div class="flightlist" id="flightlist"><div style="padding:12px;color:#93a8bf;font-size:12px">Waiting for aircraft data…</div></div>
+  </div>
+  <div class="statusline"><span id="airStatus">Connecting to ADS-B network…</span><span id="airCount">0 aircraft</span></div>
+ </section>
+</main>
+<footer><span>Aircraft coverage depends on nearby ADS-B receivers and aircraft transponders; not every aircraft will appear.</span><span>ADS-B data: adsb.lol · Map © OpenStreetMap</span></footer>
+
+<div class="modalback" id="settings">
+ <div class="modal">
+  <h2>Station location</h2>
+  <p>The starting map position is an approximate Lydney postcode-area centre. Set the tablet's current GPS position at home for a more accurate 30-mile aircraft circle, or enter coordinates manually. Your location is saved only in this browser on this tablet.</p>
+  <label for="latInput">Latitude</label><input id="latInput" inputmode="decimal" value="51.734288">
+  <label for="lonInput">Longitude</label><input id="lonInput" inputmode="decimal" value="-2.530898">
+  <div class="modalactions"><button id="gpsBtn">USE TABLET LOCATION</button><button id="saveBtn" class="active">SAVE LOCATION</button><button id="closeBtn">CLOSE</button></div>
+  <p class="notice" id="settingsMsg">Tip: on the tablet, allow location access when Chrome asks.</p>
+ </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(()=> {
+ const DEFAULT={lat:51.734288,lon:-2.530898};
+ let home={...DEFAULT}, weatherLayer='rain', aircraft=[];
+ const $=id=>document.getElementById(id);
+ try { const saved=JSON.parse(localStorage.getItem('lydneyStationHome')||'null'); if(saved&&Number.isFinite(saved.lat)&&Number.isFinite(saved.lon)){home=saved;} } catch(e){}
+ const milesToNm=30/1.150779448;
+ const milesToM=30*1609.344;
+ function windyUrl(){const p=new URLSearchParams({type:'map',location:'coordinates',metricRain:'mm',metricTemp:'°C',metricWind:'mph',zoom:'9',overlay:weatherLayer,product:'ecmwf',level:'surface',lat:home.lat,lon:home.lon,message:'false'});return 'https://embed.windy.com/embed.html?'+p.toString();}
+ function setWeatherMap(){ $('windy').src=windyUrl();document.querySelectorAll('[data-layer]').forEach(b=>b.classList.toggle('active',b.dataset.layer===weatherLayer)); }
+ function setLocationName(){ $('locationName').textContent=`HOME AREA · ${home.lat.toFixed(3)}, ${home.lon.toFixed(3)}`; }
+ function updateClock(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('en-GB',{hour12:false});$('date').textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'});}
+ updateClock();setInterval(updateClock,1000);
+ document.querySelectorAll('[data-layer]').forEach(b=>b.addEventListener('click',()=>{weatherLayer=b.dataset.layer;setWeatherMap();}));
+ // Weather data from Open-Meteo
+ async function loadWeather(){
+  try{
+   const u=`https://api.open-meteo.com/v1/forecast?latitude=${home.lat}&longitude=${home.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m&hourly=precipitation_probability&forecast_days=1&timezone=Europe%2FLondon`;
+   const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Weather service returned '+r.status);const j=await r.json(),c=j.current;
+   $('temp').textContent=Math.round(c.temperature_2m)+'°C';$('feels').textContent='Feels like '+Math.round(c.apparent_temperature)+'°C';
+   $('rain').textContent=(Number(c.precipitation)||0).toFixed(1)+' mm';
+   const now=new Date();let idx=0;if(j.hourly&&j.hourly.time){let best=Infinity;j.hourly.time.forEach((t,i)=>{const delta=Math.abs(new Date(t).getTime()-now.getTime());if(delta<best){best=delta;idx=i;}});}
+   $('rainchance').textContent='Rain chance: '+(j.hourly?.precipitation_probability?.[idx]??'--')+'%';
+   $('wind').textContent=Math.round(c.wind_speed_10m)+' mph';$('winddir').textContent='Direction '+windDirection(c.wind_direction_10m);
+   $('cloud').textContent=c.cloud_cover+'%';$('humidity').textContent='Humidity '+c.relative_humidity_2m+'%';
+   $('weatherStatus').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){$('weatherStatus').textContent='Weather data unavailable · '+e.message;}
+ }
+ function windDirection(deg){const dirs=['N','NE','E','SE','S','SW','W','NW'];return dirs[Math.round((deg%360)/45)%8];}
+ // Leaflet aircraft map
+ const map=L.map('airmap',{zoomControl:false,attributionControl:true}).setView([home.lat,home.lon],9);
+ L.control.zoom({position:'topright'}).addTo(map);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+ let homeMarker=L.circleMarker([home.lat,home.lon],{radius:6,color:'#fff',weight:2,fillColor:'#48c7e8',fillOpacity:1}).addTo(map).bindTooltip('Home area');
+ let radius=L.circle([home.lat,home.lon],{radius:milesToM,color:'#48c7e8',weight:1.5,dashArray:'7 7',fillColor:'#48c7e8',fillOpacity:.035}).addTo(map);
+ const markers=new Map();
+ function distanceMiles(lat,lon){const R=3958.7613,toRad=x=>x*Math.PI/180;const dLat=toRad(lat-home.lat),dLon=toRad(lon-home.lon),a=Math.sin(dLat/2)**2+Math.cos(toRad(home.lat))*Math.cos(toRad(lat))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(a));}
+ function aircraftIcon(track){return L.divIcon({className:'',html:`<div class="plane-icon" style="transform:rotate(${Number(track)||0}deg)">✈</div>`,iconSize:[26,26],iconAnchor:[13,13]});}
+ function esc(s){return String(s??'Unknown').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+ function fmtAlt(a){if(a==='ground')return 'GROUND';const n=Number(a);return Number.isFinite(n)?Math.round(n).toLocaleString('en-GB')+' ft':'Alt unknown';}
+ function renderAircraft(list){
+  const valid=list.filter(a=>Number.isFinite(a.lat)&&Number.isFinite(a.lon)&&distanceMiles(a.lat,a.lon)<=30);
+  const seen=new Set();
+  valid.forEach(a=>{
+   const id=a.hex||a.flight||`${a.lat},${a.lon}`;seen.add(id);
+   const label=(a.flight||a.r||a.hex||'Unknown').trim();
+   const popup=`<b>${esc(label)}</b><br>${esc(a.t||'Aircraft type unknown')} · ${esc(a.r||'Registration unknown')}<br>Altitude: ${fmtAlt(a.alt_baro)}<br>Speed: ${Number.isFinite(Number(a.gs))?Math.round(a.gs)+' kt':'Unknown'}<br>Heading: ${Number.isFinite(Number(a.track))?Math.round(a.track)+'°':'Unknown'}<br>Distance: ${distanceMiles(a.lat,a.lon).toFixed(1)} miles`;
+   if(markers.has(id)){const m=markers.get(id);m.setLatLng([a.lat,a.lon]);m.setIcon(aircraftIcon(a.track));m.setPopupContent(popup);}
+   else{markers.set(id,L.marker([a.lat,a.lon],{icon:aircraftIcon(a.track)}).addTo(map).bindPopup(popup));}
+  });
+  for(const [id,m] of markers){if(!seen.has(id)){map.removeLayer(m);markers.delete(id);}}
+  valid.sort((a,b)=>distanceMiles(a.lat,a.lon)-distanceMiles(b.lat,b.lon));
+  $('airCount').textContent=valid.length+' aircraft';
+  if(valid.length===0){$('flightlist').innerHTML='<div style="padding:12px;color:#93a8bf;font-size:12px">No aircraft currently reporting within 30 miles. The feed will keep checking.</div>';return;}
+  $('flightlist').innerHTML=valid.slice(0,12).map(a=>{
+   const id=a.hex||a.flight||`${a.lat},${a.lon}`,label=(a.flight||a.r||a.hex||'Unknown').trim(),dist=distanceMiles(a.lat,a.lon).toFixed(1);
+   return `<button class="flightrow" data-id="${esc(id)}"><span><b>${esc(label)}</b><small>${esc(a.t||'Unknown type')} · ${esc(a.r||'No registration')}</small></span><span class="alt">${fmtAlt(a.alt_baro)}</span><span class="dist">${dist} mi</span></button>`;
+  }).join('');
+  $('flightlist').querySelectorAll('[data-id]').forEach(btn=>btn.addEventListener('click',()=>{const m=markers.get(btn.dataset.id);if(m){map.setView(m.getLatLng(),11);m.openPopup();}}));
+ }
+ async function loadAircraft(){
+  try{
+   const url=`https://api.adsb.lol/v2/point/${home.lat}/${home.lon}/${milesToNm.toFixed(1)}`;
+   const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('ADS-B feed returned '+r.status);const j=await r.json();
+   aircraft=j.ac||[];renderAircraft(aircraft);$('airStatus').textContent='Feed refreshed '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit','second':'2-digit'});
+  }catch(e){$('airStatus').textContent='Aircraft feed unavailable · retrying';$('flightlist').innerHTML=`<div style="padding:12px;color:#ffca70;font-size:12px">Could not load live aircraft data. The service may be busy or blocking this request. Retrying automatically. <a href="https://www.adsb.lol/" target="_blank" rel="noopener">Open ADSB.lol</a></div>`;}
+ }
+ function applyHome(){
+  home={lat:Number($('latInput').value),lon:Number($('lonInput').value)};
+  try{localStorage.setItem('lydneyStationHome',JSON.stringify(home));}catch(e){}
+  setLocationName();setWeatherMap();homeMarker.setLatLng([home.lat,home.lon]);radius.setLatLng([home.lat,home.lon]);map.setView([home.lat,home.lon],9);
+  markers.forEach(m=>map.removeLayer(m));markers.clear();loadWeather();loadAircraft();
+ }
+ $('settingsBtn').onclick=()=>{$('latInput').value=home.lat;$('lonInput').value=home.lon;$('settings').classList.add('open');};
+ $('closeBtn').onclick=()=>$('settings').classList.remove('open');
+ $('saveBtn').onclick=()=>{const lat=Number($('latInput').value),lon=Number($('lonInput').value);if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat>90||lon < -180||lon>180){$('settingsMsg').textContent='Enter valid latitude and longitude values.';return;}applyHome();$('settings').classList.remove('open');};
+ $('gpsBtn').onclick=()=>{if(!navigator.geolocation){$('settingsMsg').textContent='Location is not available in this browser. Enter coordinates manually or tap the map to choose.';return;}$('settingsMsg').textContent='Requesting tablet location…';navigator.geolocation.getCurrentPosition(pos=>{$('latInput').value=pos.coords.latitude.toFixed(6);$('lonInput').value=pos.coords.longitude.toFixed(6);$('settingsMsg').textContent='GPS position found. Press SAVE LOCATION to use it.';},err=>{$('settingsMsg').textContent='Could not get GPS location: '+err.message+'. Enter coordinates manually.';},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});};
+ // Tapping the map lets the user fine-tune the centre point.
+ map.on('click',e=>{ $('latInput').value=e.latlng.lat.toFixed(6);$('lonInput').value=e.latlng.lng.toFixed(6);$('settings').classList.add('open');$('settingsMsg').textContent='Map point selected. Press SAVE LOCATION to use it.';});
+ setLocationName();setWeatherMap();loadWeather();loadAircraft();
+ setInterval(loadWeather,10*60*1000);setInterval(loadAircraft,15*1000);
+ window.addEventListener('resize',()=>map.invalidateSize());
+})();
+</script>
+</body>
+</html>
