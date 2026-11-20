@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1220">
+<title>Weather Intelligence | Lydney</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#08111f;--panel:#111d2e;--panel2:#17263a;--line:#263950;--text:#edf4ff;--muted:#9db0c8;--cyan:#55c8e8;--blue:#5c9dff;--green:#55d6a1;--amber:#f4bd61;--red:#ff7777}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0%,#142a43 0,#08111f 42%);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{max-width:1440px;margin:auto;padding:26px 22px 50px}.top{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}.eyebrow{color:var(--cyan);font-size:11px;letter-spacing:.18em;font-weight:800}.title{font-size:clamp(27px,4vw,42px);font-weight:800;letter-spacing:-.04em;margin:4px 0}.sub{color:var(--muted)}.actions{display:flex;gap:9px;flex-wrap:wrap}.btn,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 13px;border-radius:10px;font:inherit}.btn{cursor:pointer}.btn:hover{border-color:var(--cyan)}.status{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.card{background:linear-gradient(145deg,rgba(23,38,58,.96),rgba(14,26,42,.96));border:1px solid var(--line);border-radius:17px;padding:18px;min-width:0;box-shadow:0 12px 35px #0002}.metric-label{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase}.metric{font-size:34px;font-weight:800;letter-spacing:-.04em;margin:7px 0 0}.unit{font-size:15px;color:var(--muted);font-weight:600}.detail{color:var(--muted);font-size:13px;margin-top:3px}.hero{grid-column:span 2;min-height:170px;display:flex;justify-content:space-between;align-items:center}.hero .metric{font-size:56px}.weather-icon{font-size:58px;filter:drop-shadow(0 5px 15px #55c8e855)}.section{margin:27px 0 12px;display:flex;justify-content:space-between;align-items:end;gap:12px}.section h2{font-size:19px;margin:0}.section p{margin:3px 0 0;color:var(--muted);font-size:13px}.wide{grid-column:span 2}.chart-card{min-height:300px}.chart-wrap{height:220px;margin-top:16px;position:relative}.intel{grid-column:span 4;border-left:3px solid var(--cyan)}.intel h3{margin:0 0 7px;font-size:18px}.intel p{margin:0;color:#c5d4e7}.intel-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}.intel-item{background:#0b1728;border:1px solid var(--line);border-radius:10px;padding:11px;font-size:13px;color:#c7d6e8}.forecast{grid-column:span 4;overflow:hidden}.days{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:8px;margin-top:14px}.day{background:#0b1728;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}.day .ico{font-size:25px;margin:8px}.day strong{display:block}.day small{color:var(--muted)}.warning{color:var(--amber)}.footer{color:#8296b0;font-size:11px;margin-top:22px}.error{color:var(--red)}.location{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.location input{width:95px;background:#0b1728;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero,.wide{grid-column:span 2}.intel,.forecast{grid-column:span 2}.days{overflow-x:auto;grid-template-columns:repeat(7,110px);padding-bottom:6px}.intel-list{grid-template-columns:1fr}}
+@media(max-width:560px){.wrap{padding:18px 13px 35px}.top{align-items:flex-start;flex-direction:column}.grid{gap:9px}.card{padding:14px}.hero{min-height:145px}.hero .metric{font-size:46px}.metric{font-size:29px}.weather-icon{font-size:46px}.wide{grid-column:span 2}.chart-card{min-height:270px}.chart-wrap{height:195px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">LYDNEY · LOCAL METEOROLOGY</div>
+      <h1 class="title">Weather Intelligence</h1>
+      <div class="sub" id="locationLabel">Lydney, Gloucestershire · Live conditions & atmospheric trends</div>
+      <div class="status" style="margin-top:10px"><span class="dot" id="statusDot"></span><span id="updated">Connecting to Open-Meteo…</span></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="locateBtn">⌖ Use my location</button>
+      <button class="btn" id="refreshBtn">↻ Refresh</button>
+      <a class="btn" href="./" style="text-decoration:none">← Main station</a>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="card hero">
+      <div>
+        <div class="metric-label">Current conditions</div>
+        <div class="metric"><span id="temp">--</span><span class="unit"> °C</span></div>
+        <div class="detail" id="condition">Loading conditions…</div>
+        <div class="detail">Feels like <strong id="feels">--</strong> °C · Humidity <strong id="humidity">--</strong>%</div>
+      </div>
+      <div class="weather-icon" id="weatherIcon">🌤️</div>
+    </section>
+    <section class="card">
+      <div class="metric-label">Sea-level pressure</div>
+      <div class="metric"><span id="pressure">----</span><span class="unit"> hPa</span></div>
+      <div class="detail" id="pressureTrend">Trend calculating…</div>
+      <div class="detail">3-hour change: <strong id="pressure3">--</strong></div>
+    </section>
+    <section class="card">
+      <div class="metric-label">Wind & gusts</div>
+      <div class="metric"><span id="wind">--</span><span class="unit"> mph</span></div>
+      <div class="detail">Direction <strong id="windDir">--</strong></div>
+      <div class="detail">Gusts <strong id="gust">--</strong> mph</div>
+    </section>
+    <section class="card">
+      <div class="metric-label">Rain forecast</div>
+      <div class="metric"><span id="rainChance">--</span><span class="unit">%</span></div>
+      <div class="detail">Next hour · <strong id="rainAmount">--</strong> mm forecast</div>
+      <div class="detail">Next 24 hours: <strong id="rain24">--</strong> mm</div>
+    </section>
+    <section class="card">
+      <div class="metric-label">Dew point</div>
+      <div class="metric"><span id="dew">--</span><span class="unit"> °C</span></div>
+      <div class="detail">Air moisture indicator</div>
+    </section>
+    <section class="card">
+      <div class="metric-label">Visibility</div>
+      <div class="metric"><span id="visibility">--</span><span class="unit"> km</span></div>
+      <div class="detail" id="visibilityText">Forecast visibility</div>
+    </section>
+    <section class="card">
+      <div class="metric-label">UV index</div>
+      <div class="metric"><span id="uv">--</span></div>
+      <div class="detail" id="uvText">Current UV level</div>
+    </section>
+    <section class="card">
+      <div class="metric-label">Sunrise / sunset</div>
+      <div class="metric" style="font-size:24px" id="sunrise">--:--</div>
+      <div class="detail">Sunrise</div>
+      <div class="metric" style="font-size:24px;margin-top:8px" id="sunset">--:--</div>
+      <div class="detail">Sunset · <strong id="daylight">--</strong> daylight</div>
+    </section>
+
+    <section class="card chart-card wide">
+      <div class="metric-label">Atmospheric pressure · 24 hours</div>
+      <div class="detail">Hourly model data · sea-level pressure (hPa)</div>
+      <div class="chart-wrap"><canvas id="pressureChart"></canvas></div>
+    </section>
+    <section class="card chart-card wide">
+      <div class="metric-label">Rainfall & probability · 24 hours</div>
+      <div class="detail">Forecast precipitation (mm) and chance (%)</div>
+      <div class="chart-wrap"><canvas id="rainChart"></canvas></div>
+    </section>
+    <section class="card chart-card wide">
+      <div class="metric-label">Wind outlook · 24 hours</div>
+      <div class="detail">Wind speed and gust forecast (mph)</div>
+      <div class="chart-wrap"><canvas id="windChart"></canvas></div>
+    </section>
+    <section class="card chart-card wide">
+      <div class="metric-label">Temperature outlook · 24 hours</div>
+      <div class="detail">Air temperature and dew point (°C)</div>
+      <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
+    </section>
+
+    <section class="card intel">
+      <div class="metric-label">Automated assessment</div>
+      <h3 id="assessmentTitle">Building local weather picture…</h3>
+      <p id="assessmentText">The page is retrieving forecast and atmospheric data.</p>
+      <div class="intel-list" id="signals"></div>
+    </section>
+    <section class="card forecast">
+      <div class="metric-label">Seven-day outlook</div>
+      <div class="detail">Daily maximum/minimum temperature, rainfall and conditions</div>
+      <div class="days" id="forecastDays"></div>
+    </section>
+  </div>
+  <div class="footer">
+    Data: Open-Meteo · Forecast and model-derived data, not a physical weather-station observation.
+    Pressure trend compares hourly model values. Forecasts can change. Always consult official warnings for safety-critical decisions.
+  </div>
+</div>
+<script>
+const DEFAULT={lat:51.73,lon:-2.53,name:"Lydney, Gloucestershire"};
+let place={...DEFAULT}, charts={};
+const $=id=>document.getElementById(id);
+const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):"--";
+const signed=n=>(n>0?"+":"")+n.toFixed(1)+" hPa";
+const weatherMap={
+  0:["Clear sky","☀️"],1:["Mainly clear","🌤️"],2:["Partly cloudy","⛅"],3:["Overcast","☁️"],
+  45:["Fog","🌫️"],48:["Depositing rime fog","🌫️"],51:["Light drizzle","🌦️"],53:["Drizzle","🌦️"],55:["Heavy drizzle","🌧️"],
+  56:["Freezing drizzle","🌧️"],57:["Heavy freezing drizzle","🌧️"],61:["Slight rain","🌦️"],63:["Rain","🌧️"],65:["Heavy rain","🌧️"],
+  66:["Freezing rain","🌧️"],67:["Heavy freezing rain","🌧️"],71:["Slight snow","🌨️"],73:["Snow","🌨️"],75:["Heavy snow","❄️"],
+  77:["Snow grains","🌨️"],80:["Rain showers","🌦️"],81:["Showers","🌧️"],82:["Heavy showers","⛈️"],85:["Snow showers","🌨️"],86:["Heavy snow showers","❄️"],
+  95:["Thunderstorm","⛈️"],96:["Thunderstorm with hail","⛈️"],99:["Severe thunderstorm with hail","⛈️"]
+};
+function direction(deg){if(!Number.isFinite(deg))return"--";return ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(deg/22.5)%16]}
+function timeLabel(s){return s?s.slice(11,16):"--:--"}
+function nearestIndex(times,target){let best=0,dist=Infinity;times.forEach((t,i)=>{const d=Math.abs(new Date(t)-target);if(d<dist){dist=d;best=i}});return best}
+function pressureDelta(hourly,hours){const now=new Date();const i=nearestIndex(hourly.time,now);const j=nearestIndex(hourly.time,new Date(now-hours*3600000));return hourly.pressure_msl[i]-hourly.pressure_msl[j]}
+function chart(id,label,labels,datasets,type="line"){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),{type,data:{labels,datasets:datasets.map((d,i)=>({label:d.label,data:d.data,borderColor:["#55c8e8","#f4bd61","#55d6a1"][i%3],backgroundColor:["#55c8e833","#f4bd6133","#55d6a133"][i%3],borderWidth:2,pointRadius:0,tension:.3,fill:false,yAxisID:d.axis||"y",...(type==="bar"?{borderRadius:4}: {})}))},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:"#b8c9dc",usePointStyle:true,boxWidth:7}},tooltip:{mode:"index",intersect:false}},scales:{x:{ticks:{color:"#8fa5bf",maxTicksLimit:8},grid:{color:"#263950"}},y:{ticks:{color:"#8fa5bf"},grid:{color:"#263950"},beginAtZero:false},...(datasets.some(d=>d.axis==="y1")?{y1:{position:"right",ticks:{color:"#f4bd61"},grid:{drawOnChartArea:false},min:0,max:100}}:{})}}})}
+function setAssessment(c,h,d3){
+ const p3=d3, gust=c.wind_gusts_10m, rain=h.precipitation_probability[nearestIndex(h.time,new Date(Date.now()+3600000))]??0;
+ let title="Conditions relatively steady",parts=[];
+ if(p3<=-3){title="Pressure falling rapidly";parts.push("Sea-level pressure has fallen by "+fmt(Math.abs(p3))+" hPa over approximately three hours. This can indicate a developing low-pressure influence.")}
+ else if(p3<=-1){title="Pressure gradually falling";parts.push("Pressure is trending down. Monitor the next forecast updates for signs of unsettled weather.")}
+ else if(p3>=3){title="Pressure rising rapidly";parts.push("Pressure is rising significantly, which can be associated with improving or stabilising conditions.")}
+ else if(p3>=1){title="Pressure gradually rising";parts.push("Pressure is trending upwards, often associated with more settled conditions.")}
+ else parts.push("No significant three-hour pressure change is detected in the model data.");
+ if(gust>=35)parts.push("Forecast wind gusts are strong, reaching "+fmt(gust,0)+" mph.");
+ if(rain>=70)parts.push("Rain probability is high in the next hour ("+fmt(rain,0)+"%).");
+ if(!parts.length)parts.push("No prominent weather signals detected.");
+ $("assessmentTitle").textContent=title;
+ $("assessmentText").textContent=parts.join(" ");
+ const signals=[["Pressure",p3<=-3?"Rapid fall":p3>=3?"Rapid rise":"No major change"],["Wind gusts",fmt(gust,0)+" mph"],["Next-hour rain",fmt(rain,0)+"%"]];
+ $("signals").innerHTML=signals.map(x=>`<div class="intel-item"><strong>${x[0]}</strong><br>${x[1]}</div>`).join("");
+}
+function uvLabel(v){return v<3?"Low":v<6?"Moderate":v<8?"High":v<11?"Very high":"Extreme"}
+function render(data){
+ const c=data.current,h=data.hourly,d=data.daily;
+ $("locationLabel").textContent=place.name+" · Live conditions & atmospheric trends";
+ $("temp").textContent=fmt(c.temperature_2m,0);$("feels").textContent=fmt(c.apparent_temperature,0);
+ $("humidity").textContent=fmt(c.relative_humidity_2m,0);
+ const wm=weatherMap[c.weather_code]||["Conditions unavailable","🌡️"];
+ $("condition").textContent=wm[0];$("weatherIcon").textContent=wm[1];
+ $("pressure").textContent=fmt(c.pressure_msl,1);
+ const p3=pressureDelta(h,3),p24=pressureDelta(h,24);
+ $("pressure3").textContent=signed(p3);
+ $("pressureTrend").textContent=p3<=-1?"↓ Falling":p3>=1?"↑ Rising":"→ Steady";
+ $("pressureTrend").style.color=p3<=-1?"#f4bd61":p3>=1?"#55d6a1":"#9db0c8";
+ $("wind").textContent=fmt(c.wind_speed_10m,0);$("windDir").textContent=direction(c.wind_direction_10m);
+ $("gust").textContent=fmt(c.wind_gusts_10m,0);
+ const hi=nearestIndex(h.time,new Date(Date.now()+3600000));
+ $("rainChance").textContent=fmt(h.precipitation_probability[hi],0);
+ $("rainAmount").textContent=fmt(h.precipitation[hi],1);
+ $("rain24").textContent=fmt(h.precipitation.slice(0,24).reduce((a,b)=>a+(b||0),0),1);
+ $("dew").textContent=fmt(h.dew_point_2m[nearestIndex(h.time,new Date())],1);
+ const vis=h.visibility[nearestIndex(h.time,new Date())];
+ $("visibility").textContent=fmt(vis/1000,1);
+ $("visibilityText").textContent=vis<1000?"Poor visibility":vis<5000?"Reduced visibility":"Generally good visibility";
+ const uv=h.uv_index[nearestIndex(h.time,new Date())]??0;
+ $("uv").textContent=fmt(uv,1);$("uvText").textContent=uvLabel(uv)+" UV";
+ $("sunrise").textContent=timeLabel(d.sunrise[0]);$("sunset").textContent=timeLabel(d.sunset[0]);
+ const mins=(new Date(d.sunset[0])-new Date(d.sunrise[0]))/60000;
+ $("daylight").textContent=Math.floor(mins/60)+"h "+Math.round(mins%60)+"m";
+ const times=h.time.slice(0,24).map(timeLabel);
+ chart("pressureChart","Pressure",times,[{label:"Pressure (hPa)",data:h.pressure_msl.slice(0,24)}]);
+ chart("rainChart","Rainfall",times,[{label:"Rain (mm)",data:h.precipitation.slice(0,24)},{label:"Probability (%)",data:h.precipitation_probability.slice(0,24),axis:"y1"}],"bar");
+ chart("windChart","Wind",times,[{label:"Wind (mph)",data:h.wind_speed_10m.slice(0,24)},{label:"Gusts (mph)",data:h.wind_gusts_10m.slice(0,24)}]);
+ chart("tempChart","Temperature",times,[{label:"Temperature (°C)",data:h.temperature_2m.slice(0,24)},{label:"Dew point (°C)",data:h.dew_point_2m.slice(0,24)}]);
+ $("forecastDays").innerHTML=d.time.map((date,i)=>{const code=d.weather_code[i],w=weatherMap[code]||["Weather","🌤️"];const day=new Date(date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short"});return `<div class="day"><small>${day}</small><div class="ico">${w[1]}</div><strong>${fmt(d.temperature_2m_max[i],0)}° / ${fmt(d.temperature_2m_min[i],0)}°</strong><small>${fmt(d.precipitation_sum[i],1)} mm rain</small></div>`}).join("");
+ setAssessment(c,h,p3);
+}
+async function load(){
+ $("updated").textContent="Updating weather data…";$("statusDot").style.background="#f4bd61";
+ const url=new URL("https://api.open-meteo.com/v1/forecast");
+ const params={latitude:place.lat,longitude:place.lon,current:"temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,weather_code,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m",hourly:"temperature_2m,relative_humidity_2m,dew_point_2m,precipitation_probability,precipitation,pressure_msl,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index",daily:"weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset",timezone:"Europe/London",wind_speed_unit:"mph",precipitation_unit:"mm",forecast_days:7,past_days:1};
+ Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
+ try{const res=await fetch(url);if(!res.ok)throw new Error("Weather service returned "+res.status);const data=await res.json();if(!data.current||!data.hourly||!data.daily)throw new Error("Incomplete weather response");render(data);$("updated").textContent="Updated "+new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" · Open-Meteo";$("statusDot").style.background="#55d6a1"}
+ catch(e){$("updated").textContent="Unable to update: "+e.message;$("statusDot").style.background="#ff7777";console.error(e)}
+}
+$("refreshBtn").addEventListener("click",load);
+$("locateBtn").addEventListener("click",()=>{if(!navigator.geolocation){alert("Location is not supported by this browser.");return}navigator.geolocation.getCurrentPosition(pos=>{place={lat:pos.coords.latitude,lon:pos.coords.longitude,name:"Your current location"};load()},()=>alert("Location permission was not granted. Lydney remains selected."),{enableHighAccuracy:false,timeout:10000})});
+load();setInterval(load,15*60*1000);
+</script>
+</body>
+</html>
